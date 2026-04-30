@@ -113,12 +113,16 @@ const Checkout = ({
   service,
   formValues,
   fetchedData,
-  onBack
+  onBack,
+  totalPrice,
+  quantity
 }: {
   service: ServiceItem;
   formValues: Record<string, string>;
   fetchedData: any;
-  onBack: () => void
+  onBack: () => void;
+  totalPrice: number;
+  quantity: number;
 }) => {
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card'>('pix');
   const [isLoadingPayment, setIsLoadingPayment] = useState(false);
@@ -127,7 +131,11 @@ const Checkout = ({
     setIsLoadingPayment(true);
     try {
       const response = await axios.post('/api/kiwify/create-payment', {
-        service,
+        service: {
+          ...service,
+          price: totalPrice, // Send the total price including quantity
+          quantity
+        },
         customer: {
           name: formValues['Nome completo'] || formValues['NOME COMPLETO'] || 'Cliente',
           email: formValues['EMAIL'] || 'cliente@exemplo.com',
@@ -150,107 +158,148 @@ const Checkout = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="rounded-2xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm"
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      className="rounded-3xl border border-gray-200 bg-white p-6 md:p-10 shadow-2xl shadow-blue-900/5 relative overflow-hidden"
     >
+      <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+        <Lock className="h-32 w-32" />
+      </div>
+
       <button
         onClick={onBack}
-        className="mb-8 flex items-center gap-2 text-sm font-bold text-blue-600 hover:underline"
+        className="mb-8 flex items-center gap-2 text-xs font-black text-blue-600 hover:text-blue-800 transition-colors uppercase tracking-widest"
       >
         <ChevronRight className="h-4 w-4 rotate-180" />
-        Voltar para informações
+        Voltar e Corrigir Dados
       </button>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        {/* Order Info */}
-        <div className="space-y-6">
-          <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Resumo do Pagamento</h3>
+      <div className="mb-10 flex items-center gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200">
+          <ShieldCheck className="h-6 w-6" />
+        </div>
+        <div>
+          <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Checkout Seguro</h3>
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Sua solicitação está sendo processada</p>
+        </div>
+      </div>
 
-          <div className="rounded-xl bg-gray-50 p-6 space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-bold text-gray-500 uppercase">Serviço</span>
-              <span className="text-sm font-black text-gray-900">{service.name}</span>
-            </div>
-            <div className="flex justify-between items-center border-t border-gray-200 pt-4">
-              <span className="text-sm font-bold text-gray-500 uppercase">Documento</span>
-              <span className="text-sm font-black text-gray-900">
-                {formValues['CPF'] || formValues['CNPJ'] || formValues['CNPJ MEI'] || formValues['CPF/CNPJ']}
-              </span>
-            </div>
-            {fetchedData && !fetchedData.isError && (
-              <div className="flex justify-between items-start border-t border-gray-200 pt-4">
-                <span className="text-sm font-bold text-gray-500 uppercase">Razão Social</span>
-                <span className="text-sm font-black text-gray-900 text-right max-w-[200px]">{fetchedData.companyName}</span>
+      <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
+        {/* Order Info */}
+        <div className="space-y-8">
+          <div className="rounded-2xl bg-gray-50/80 p-8 border border-gray-100">
+            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Resumo da Solicitação</h4>
+            
+            <div className="space-y-5">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Serviço Selecionado</span>
+                <span className="text-xs font-black text-blue-900 uppercase">{service.name} {quantity > 1 && `(${quantity}x)`}</span>
               </div>
-            )}
-            <div className="flex justify-between items-center border-t border-gray-200 pt-4">
-              <span className="text-lg font-black text-gray-900 uppercase">Total</span>
-              <span className="text-2xl font-black text-blue-600">
-                R$ {service.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
+              <div className="flex justify-between items-center border-t border-gray-200/50 pt-4">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Documento</span>
+                <span className="text-xs font-black text-gray-900 uppercase">
+                  {formValues['CPF'] || formValues['CNPJ'] || formValues['CNPJ MEI'] || formValues['CPF/CNPJ']}
+                </span>
+              </div>
+              {fetchedData && !fetchedData.isError && (
+                <div className="flex justify-between items-start border-t border-gray-200/50 pt-4">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Nome do Titular</span>
+                  <span className="text-xs font-black text-gray-900 text-right max-w-[200px] uppercase">{fetchedData.companyName}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center border-t-2 border-dashed border-gray-300 pt-6 mt-6">
+                <span className="text-sm font-black text-gray-900 uppercase">Valor Total</span>
+                <div className="text-right">
+                  <span className="block text-3xl font-black text-blue-600 leading-none">
+                    R$ {totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                  <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Taxas inclusas</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-blue-700">
-            <ShieldCheck className="h-6 w-6 flex-shrink-0" />
-            <p className="text-xs font-bold leading-relaxed uppercase">
-              Pagamento 100% Seguro via Criptografia SSL
-            </p>
+          <div className="flex items-start gap-4 rounded-2xl bg-emerald-50 p-5 text-emerald-800 border border-emerald-100">
+            <div className="mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-200">
+              <Lock className="h-3 w-3" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-black uppercase tracking-widest">Ambiente Protegido</p>
+              <p className="text-[10px] font-bold leading-relaxed uppercase opacity-80">
+                Seus dados pessoais e de pagamento estão protegidos pela Lei Geral de Proteção de Dados (LGPD).
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Payment Methods */}
-        <div className="space-y-6">
-          <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Forma de Pagamento</h3>
+        <div className="space-y-8">
+          <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">Selecione o Método de Pagamento</h4>
 
           <div className="grid grid-cols-1 gap-4">
             <button
               onClick={() => setPaymentMethod('pix')}
-              className={`flex items-center justify-between rounded-xl border-2 p-4 transition-all ${paymentMethod === 'pix' ? 'border-blue-600 bg-blue-50' : 'border-gray-100 hover:border-gray-200'
+              className={`group flex items-center justify-between rounded-2xl border-2 p-5 transition-all duration-300 ${paymentMethod === 'pix' ? 'border-blue-600 bg-blue-50/50 shadow-xl shadow-blue-900/5 scale-[1.02]' : 'border-gray-100 hover:border-gray-200 grayscale opacity-70'
                 }`}
             >
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                  <Zap className="h-6 w-6" />
+              <div className="flex items-center gap-5">
+                <div className={`flex h-14 w-14 items-center justify-center rounded-2xl transition-all ${paymentMethod === 'pix' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200 rotate-0' : 'bg-gray-100 text-gray-400 rotate-[-5deg]'}`}>
+                  <Zap className="h-7 w-7" />
                 </div>
                 <div className="text-left">
-                  <p className="font-black text-gray-900 uppercase tracking-tight">PIX</p>
-                  <p className="text-xs font-bold text-emerald-600 uppercase">Aprovação Imediata</p>
+                  <p className="text-lg font-black text-gray-900 uppercase tracking-tighter">PIX <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full ml-2">POPULAR</span></p>
+                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Liberação instantânea</p>
                 </div>
               </div>
-              {paymentMethod === 'pix' && <CheckCircle2 className="h-6 w-6 text-blue-600" />}
+              <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'pix' ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300'}`}>
+                {paymentMethod === 'pix' && <CheckCircle2 className="h-4 w-4" />}
+              </div>
             </button>
 
             <button
               onClick={() => setPaymentMethod('card')}
-              className={`flex items-center justify-between rounded-xl border-2 p-4 transition-all ${paymentMethod === 'card' ? 'border-blue-600 bg-blue-50' : 'border-gray-100 hover:border-gray-200'
+              className={`group flex items-center justify-between rounded-2xl border-2 p-5 transition-all duration-300 ${paymentMethod === 'card' ? 'border-blue-600 bg-blue-50/50 shadow-xl shadow-blue-900/5 scale-[1.02]' : 'border-gray-100 hover:border-gray-200 grayscale opacity-70'
                 }`}
             >
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                  <CreditCard className="h-6 w-6" />
+              <div className="flex items-center gap-5">
+                <div className={`flex h-14 w-14 items-center justify-center rounded-2xl transition-all ${paymentMethod === 'card' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 rotate-0' : 'bg-gray-100 text-gray-400 rotate-[-5deg]'}`}>
+                  <CreditCard className="h-7 w-7" />
                 </div>
                 <div className="text-left">
-                  <p className="font-black text-gray-900 uppercase tracking-tight">Cartão de Crédito</p>
-                  <p className="text-xs font-bold text-gray-500 uppercase">Até 12x no cartão</p>
+                  <p className="text-lg font-black text-gray-900 uppercase tracking-tighter">Cartão de Crédito</p>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Parcelado em até 12x</p>
                 </div>
               </div>
-              {paymentMethod === 'card' && <CheckCircle2 className="h-6 w-6 text-blue-600" />}
+              <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'card' ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300'}`}>
+                {paymentMethod === 'card' && <CheckCircle2 className="h-4 w-4" />}
+              </div>
             </button>
           </div>
 
           <button
             disabled={isLoadingPayment}
-            className={`w-full rounded-xl py-5 text-lg font-black text-white shadow-lg transition-all active:scale-[0.98] ${isLoadingPayment ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#4CAF50] shadow-green-100 hover:bg-green-600'
+            className={`group relative w-full overflow-hidden rounded-2xl py-6 text-lg font-black text-white shadow-2xl transition-all active:scale-[0.98] ${isLoadingPayment ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-500 shadow-emerald-200 hover:bg-emerald-600 hover:-translate-y-1'
               }`}
             onClick={handlePayment}
           >
-            {isLoadingPayment ? 'PROCESSANDO...' : (paymentMethod === 'pix' ? 'GERAR QR CODE PIX' : 'PAGAR COM CARTÃO')}
+            <div className="relative z-10 flex items-center justify-center gap-3">
+              {isLoadingPayment ? (
+                <>
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <span>PROCESSANDO...</span>
+                </>
+              ) : (
+                <>
+                  <span>{paymentMethod === 'pix' ? 'GERAR QR CODE PIX' : 'PAGAR COM CARTÃO'}</span>
+                  <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </>
+              )}
+            </div>
+            {!isLoadingPayment && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />}
           </button>
 
-          <div className="flex items-center justify-center gap-6 opacity-50 grayscale">
+          <div className="flex items-center justify-center gap-8 opacity-30 grayscale hover:opacity-60 transition-opacity">
             <img src="https://logodownload.org/wp-content/uploads/2014/07/visa-logo-1.png" alt="Visa" className="h-4 object-contain" referrerPolicy="no-referrer" />
             <img src="https://logodownload.org/wp-content/uploads/2014/07/mastercard-logo-7.png" alt="Mastercard" className="h-6 object-contain" referrerPolicy="no-referrer" />
             <img src="https://logodownload.org/wp-content/uploads/2020/10/pix-logo-2.png" alt="Pix" className="h-5 object-contain" referrerPolicy="no-referrer" />
@@ -261,75 +310,9 @@ const Checkout = ({
   );
 };
 
-interface ServiceGroupProps {
-  category: Category;
-  onSelectService: (service: ServiceItem, categoryTitle: string) => void;
-  selectedService: ServiceItem | null;
-}
 
-const ServiceGroup: React.FC<ServiceGroupProps> = ({ category, onSelectService, selectedService }) => {
-  return (
-    <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div className="flex items-center gap-3 border-b border-gray-100 bg-gray-50/50 p-4">
-        <span className="text-blue-900">{category.icon}</span>
-        <div className="flex flex-col">
-          <span className="text-sm font-black uppercase tracking-wider text-blue-950">{category.title}</span>
-          {category.description && (
-            <span className="text-[10px] font-medium text-gray-500">{category.description}</span>
-          )}
-        </div>
-      </div>
-
-      <div className="p-2">
-        {category.items.map((item, idx) => {
-          const isSelected = selectedService?.name === item.name;
-          return (
-            <div key={idx} className="mb-1 last:mb-0">
-              <div
-                onClick={() => onSelectService(item, category.title)}
-                className={`group flex cursor-pointer items-center justify-between rounded-lg p-3 transition-all hover:bg-gray-50 ${isSelected ? 'bg-blue-50 ring-2 ring-blue-600/20' : ''}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${isSelected ? 'border-blue-700 bg-white' : 'border-gray-300 group-hover:border-blue-400'}`}>
-                    {isSelected && <div className="h-2.5 w-2.5 rounded-full bg-blue-700" />}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className={`text-sm font-bold ${isSelected ? 'text-blue-900' : 'text-gray-700'}`}>{item.name}</span>
-                    {item.subtitle && (
-                      <span className="text-[10px] text-gray-400 font-medium">{item.subtitle}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-[9px] font-black uppercase tracking-tighter text-blue-700 border border-blue-100">
-                    <ShieldCheck className="h-3 w-3" />
-                    Assessoria Disponível
-                  </span>
-                  {item.tag && (
-                    <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[9px] font-black uppercase tracking-tighter text-amber-700 border border-amber-100">
-                      <Zap className="h-3 w-3 fill-amber-700" />
-                      {item.tag}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
 
 function HomePage() {
-  const [expandedId, setExpandedId] = useState<string | null>('gestao');
-  const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
-
-  useEffect(() => {
-    setFetchedData(null);
-    setFormValues({});
-    setPriceUnlocked(false);
-  }, [selectedService]);
 
   const [peopleOnline, setPeopleOnline] = useState(55);
   const [remainingServices, setRemainingServices] = useState(35);
@@ -370,339 +353,52 @@ function HomePage() {
     };
   }, []);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [stage, setStage] = useState<CheckoutStage>('selection');
+  const [stage, setStage] = useState<CheckoutStage>('form');
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [fetchedData, setFetchedData] = useState<{ companyName?: string; tradeName?: string } | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [priceUnlocked, setPriceUnlocked] = useState(false);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
-  const [searchQuery, setSearchQuery] = useState('');
+  const [formStep, setFormStep] = useState(1);
+  const [quantity, setQuantity] = useState(1);
 
   const categories: Category[] = [
     {
-      id: 'gestao',
-      title: 'Gestão de MEI (Abertura/Baixa)',
-      icon: <Wallet className="h-5 w-5" />,
+      id: 'passaporte',
+      title: 'Emissão de Passaporte',
+      icon: <Briefcase className="h-5 w-5" />,
       items: [
         {
-          name: 'ABRIR MEI',
-          price: 107.00,
+          name: 'Nova solicitação de passaporte',
+          price: 407.15,
           tag: 'Mais Procurado',
+          urgentNotice: 'ATENÇÃO: Devido à alta demanda, as vagas para agendamento de emissão estão limitadas. Garanta seu processo agora.',
           fields: [
+            // DADOS PESSOAIS
             { label: 'Nome completo', type: 'text', placeholder: 'Seu nome completo' },
-            { label: 'EMAIL', type: 'email', placeholder: 'seu@email.com' },
+            { label: 'Sexo', type: 'select', options: ['MASCULINO', 'FEMININO'] },
+            { label: 'Data de nascimento', type: 'date' },
+            { label: 'Filiação 1 (Nome)', type: 'text' },
+            { label: 'Filiação 2 (Nome)', type: 'text', optional: true },
+            { label: 'Nacionalidade', type: 'text', placeholder: 'BRASILEIRA' },
+            { label: 'Raça ou cor', type: 'select', options: ['BRANCA', 'PRETA', 'PARDA', 'AMARELA', 'INDÍGENA', 'NÃO DECLARADA'] },
+            { label: 'Estado civil', type: 'select', options: ['SOLTEIRO(A)', 'CASADO(A)', 'DIVORCIADO(A)', 'VIÚVO(A)', 'SEPARADO(A) JUDICIALMENTE', 'UNIÃO ESTÁVEL'] },
+
+            // DOCUMENTOS
             { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
+            { label: 'Identidade (RG)', type: 'text' },
+            { label: 'Órgão Emissor', type: 'text' },
+            { label: 'Data de Emissão (RG)', type: 'date' },
+
+            // DADOS COMPLEMENTARES
+            { label: 'Profissão', type: 'text' },
+            { label: 'EMAIL', type: 'email', placeholder: 'seu@email.com' },
             { label: 'Telefone / WhatsApp', type: 'tel', placeholder: '(00) 00000-0000' },
-            { label: 'Atividades (CNAEs)', type: 'textarea', placeholder: 'Descreva as atividades que irá realizar' },
-          ]
-        },
-        {
-          name: 'BAIXA MEI',
-          price: 109.00,
-          fields: [
-            { label: 'Nome completo', type: 'text', placeholder: 'Seu nome completo' },
-            { label: 'EMAIL', type: 'email', placeholder: 'seu@email.com' },
-            { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'CNPJ MEI', type: 'text', placeholder: '00.000.000/0001-00' },
-            { label: 'Telefone / WhatsApp', type: 'tel', placeholder: '(00) 00000-0000' },
-          ]
-        },
-        {
-          name: 'ALTERAR MEI',
-          price: 89.90,
-          fields: [
-            { label: 'Nome completo', type: 'text', placeholder: 'Seu nome completo' },
-            { label: 'EMAIL', type: 'email', placeholder: 'seu@email.com' },
-            { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'Telefone / WhatsApp', type: 'tel', placeholder: '(00) 00000-0000' },
-            { label: 'Atividade para alterar (CNAEs)', type: 'textarea', placeholder: 'Quais atividades deseja alterar?' },
-          ]
-        },
-      ]
-    },
-    {
-      id: 'fiscais',
-      title: 'Serviços Fiscais',
-      icon: <FileText className="h-5 w-5" />,
-      items: [
-        {
-          name: 'NOTA FISCAL',
-          price: 72.00,
-          fields: [
-            { label: 'CNPJ', type: 'text', placeholder: '00.000.000/0001-00' },
-            { label: 'Info', type: 'text', info: 'Entraremos em contato para pedir os dados da Nota' },
-          ]
-        },
-      ]
-    },
-    {
-      id: 'obrigacoes',
-      title: 'Obrigações e Impostos',
-      icon: <Scale className="h-5 w-5" />,
-      items: [
-        {
-          name: 'REGULARIZE MEI',
-          price: 102.00,
-          urgentNotice: 'Comunicado: MEI irregular após 31/03 pode ter o CNPJ cancelado e dívida transferida para o CPF. REGULARIZE AGORA.',
-          fields: [
-            { label: 'CNPJ', type: 'text', placeholder: '00.000.000/0001-00' },
-            { label: 'DATA DE NASCIMENTO', type: 'date' },
-            { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'Opcional - TÍTULO DE ELEITOR', type: 'text', placeholder: 'Número do título', optional: true },
-          ]
-        },
-        {
-          name: 'DECLARAÇÃO MEI',
-          price: 107.00,
-          urgentNotice: 'Atenção: O prazo para a declaração anual encerra em breve. Evite multas e cancelamento do seu MEI.',
-          fields: [
-            { label: 'CNPJ', type: 'text', placeholder: '00.000.000/0001-00' },
-            { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-            {
-              label: 'QUAL TIPO DE SERVIÇO',
-              type: 'select',
-              options: ['Consultar declaração', 'Recibo da declaração', 'Emitir 2 via da declaração já apresentada']
-            },
-          ]
-        },
-        {
-          name: 'BOLETO DAS MEI',
-          price: 49.90,
-          fields: [
-            { label: 'CNPJ', type: 'text', placeholder: '00.000.000/0001-00' },
-            { label: 'NOME COMPLETO', type: 'text', placeholder: 'Seu nome completo' },
-            { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'EMAIL', type: 'email', placeholder: 'seu@email.com' },
-          ]
-        },
-        {
-          name: 'PARCELAMENTO MEI',
-          price: 107.00,
-          urgentNotice: 'Aviso: Parcelamentos em atraso podem ser rescindidos pela Receita Federal. Regularize suas parcelas.',
-          fields: [
-            { label: 'CNPJ', type: 'text', placeholder: '00.000.000/0001-00' },
-            { label: 'DATA DE NASCIMENTO', type: 'date' },
-            { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'Opcional - TÍTULO DE ELEITOR', type: 'text', placeholder: 'Número do título', optional: true },
-          ]
-        },
-      ]
-    },
-    {
-      id: 'documentos',
-      title: 'Documentos e Certidões',
-      icon: <Briefcase className="h-5 w-5" />,
-      items: [
-        {
-          name: 'CERTIFICADO MEI - CCMEI',
-          price: 57.90,
-          fields: [
-            { label: 'CNPJ', type: 'text', placeholder: '00.000.000/0001-00' },
-            { label: 'NOME COMPLETO', type: 'text', placeholder: 'Seu nome completo' },
-            { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'EMAIL', type: 'email', placeholder: 'seu@email.com' },
-          ]
-        },
-        {
-          name: 'ALVARÁ DE LICENÇA DE FUNCIONAMENTO',
-          price: 169.00,
-          fields: [
-            { label: 'CNPJ', type: 'text', placeholder: '00.000.000/0001-00' },
-            { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-          ]
-        },
-        {
-          name: 'CARTÃO CNPJ MEI',
-          price: 55.90,
-          fields: [
-            { label: 'CNPJ', type: 'text', placeholder: '00.000.000/0001-00' },
-            { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-          ]
-        },
-      ]
-    },
-    {
-      id: 'consultas',
-      title: 'Consultas e Pesquisas',
-      icon: <Search className="h-5 w-5" />,
-      items: [
-        {
-          name: 'CONSULTAR PENDÊNCIAS',
-          price: 62.90,
-          fields: [
-            { label: 'CNPJ', type: 'text', placeholder: '00.000.000/0001-00' },
-            { label: 'DATA DE NASCIMENTO', type: 'date' },
-            { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'Opcional - TÍTULO DE ELEITOR', type: 'text', placeholder: 'Número do título', optional: true },
-          ]
-        },
-        {
-          name: 'CONSULTAR BAIXA MEI',
-          price: 68.90,
-          fields: [
-            { label: 'CNPJ', type: 'text', placeholder: '00.000.000/0001-00' },
-            { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-          ]
-        },
-        {
-          name: 'BUSCAR MEI PELO CPF',
-          price: 52.90,
-          fields: [
-            { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'NOME COMPLETO', type: 'text', placeholder: 'Seu nome completo' },
-            { label: 'EMAIL', type: 'email', placeholder: 'seu@email.com' },
-          ]
-        },
-        {
-          name: 'SITUAÇÃO MEI',
-          price: 58.90,
-          fields: [
-            { label: 'CNPJ', type: 'text', placeholder: '00.000.000/0001-00' },
-            { label: 'DATA DE NASCIMENTO', type: 'date' },
-            { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'Nome da mãe', type: 'text', placeholder: 'Nome completo da mãe' },
-          ]
-        },
-      ]
-    },
-    {
-      id: 'credito',
-      title: 'Crédito e Financiamento',
-      icon: <CreditCard className="h-5 w-5" />,
-      items: [
-        {
-          name: 'Crédito PJ',
-          price: 149.00,
-          tag: 'Entrega Rápida',
-          fields: [
-            { label: 'CNPJ', type: 'text', placeholder: '00.000.000/0001-00' },
-            { label: 'NOME COMPLETO', type: 'text', placeholder: 'Seu nome completo' },
-            { label: 'VALOR DESEJADO', type: 'text', placeholder: 'R$ 0,00' },
-          ]
-        },
-      ]
-    },
-    {
-      id: 'juridico',
-      title: 'Jurídico e Regularização',
-      icon: <Scale className="h-5 w-5" />,
-      items: [
-        {
-          name: 'Limpa Nome Judicial',
-          price: 299.00,
-          fields: [
-            { label: 'CPF/CNPJ', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'NOME COMPLETO', type: 'text', placeholder: 'Seu nome completo' },
-          ]
-        },
-      ]
-    },
-    {
-      id: 'auditoria',
-      title: 'AUDITORIA JURÍDICA ESPECIALIZADA',
-      description: 'Qual tipo de contrato você quer blindar?',
-      icon: <ShieldCheck className="h-5 w-5" />,
-      items: [
-        {
-          name: 'Financiamento de Veículo',
-          subtitle: 'Juros abusivos, Busca e Apreensão, Taxas Ocultas',
-          price: 197.00,
-          urgentNotice: 'Selecione a categoria do seu documento para uma análise de precisão máxima baseada no STJ e Bacen.',
-          fields: [
-            { label: 'CPF/CNPJ', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'NOME COMPLETO', type: 'text', placeholder: 'Seu nome completo' },
-            { label: 'TIPO DE PROBLEMA', type: 'select', options: ['Juros abusivos', 'Busca e Apreensão', 'Taxas Ocultas'] },
-          ]
-        },
-        {
-          name: 'Arrematação em Leilão',
-          subtitle: 'Edital, Matrícula, Dívidas Ocultas',
-          price: 247.00,
-          urgentNotice: 'Selecione a categoria do seu documento para uma análise de precisão máxima baseada no STJ e Bacen.',
-          fields: [
-            { label: 'CPF/CNPJ', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'NOME COMPLETO', type: 'text', placeholder: 'Seu nome completo' },
-            { label: 'TIPO DE PROBLEMA', type: 'select', options: ['Edital', 'Matrícula', 'Dívidas Ocultas'] },
-          ]
-        },
-        {
-          name: 'Aluguel & Imobiliário',
-          subtitle: 'Multa de rescisão, Reajuste IGP-M, Despejo',
-          price: 187.00,
-          urgentNotice: 'Selecione a categoria do seu documento para uma análise de precisão máxima baseada no STJ e Bacen.',
-          fields: [
-            { label: 'CPF/CNPJ', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'NOME COMPLETO', type: 'text', placeholder: 'Seu nome completo' },
-            { label: 'TIPO DE PROBLEMA', type: 'select', options: ['Multa de rescisão', 'Reajuste IGP-M', 'Despejo'] },
-          ]
-        },
-        {
-          name: 'Empréstimo Bancário & Consignado',
-          subtitle: 'Superendividamento, RMC, Venda Casada',
-          price: 197.00,
-          urgentNotice: 'Selecione a categoria do seu documento para uma análise de precisão máxima baseada no STJ e Bacen.',
-          fields: [
-            { label: 'CPF/CNPJ', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'NOME COMPLETO', type: 'text', placeholder: 'Seu nome completo' },
-            { label: 'TIPO DE PROBLEMA', type: 'select', options: ['Superendividamento', 'RMC', 'Venda Casada'] },
-          ]
-        },
-        {
-          name: 'Empresarial & Contrato Social',
-          subtitle: 'Blindagem de Sócios, Saída, Responsabilidade',
-          price: 297.00,
-          urgentNotice: 'Selecione a categoria do seu documento para uma análise de precisão máxima baseada no STJ e Bacen.',
-          fields: [
-            { label: 'CPF/CNPJ', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'NOME COMPLETO', type: 'text', placeholder: 'Seu nome completo' },
-            { label: 'TIPO DE PROBLEMA', type: 'select', options: ['Blindagem de Sócios', 'Saída', 'Responsabilidade'] },
-          ]
-        },
-        {
-          name: 'Prestação de Serviços',
-          subtitle: 'Riscos trabalhistas, Não pagamento, Prazos',
-          price: 157.00,
-          urgentNotice: 'Selecione a categoria do seu documento para uma análise de precisão máxima baseada no STJ e Bacen.',
-          fields: [
-            { label: 'CPF/CNPJ', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'NOME COMPLETO', type: 'text', placeholder: 'Seu nome completo' },
-            { label: 'TIPO DE PROBLEMA', type: 'select', options: ['Riscos trabalhistas', 'Não pagamento', 'Prazos'] },
-          ]
-        },
-        {
-          name: 'Outros Contratos',
-          subtitle: 'Consulta Jurídica Genérica',
-          price: 127.00,
-          urgentNotice: 'Selecione a categoria do seu documento para uma análise de precisão máxima baseada no STJ e Bacen.',
-          fields: [
-            { label: 'CPF/CNPJ', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'NOME COMPLETO', type: 'text', placeholder: 'Seu nome completo' },
-            { label: 'DESCRIÇÃO DO CONTRATO', type: 'textarea', placeholder: 'Descreva brevemente o contrato' },
-          ]
-        },
-      ]
-    },
-    {
-      id: 'consultoria',
-      title: 'Consultoria e Gestão',
-      icon: <Briefcase className="h-5 w-5" />,
-      items: [
-        {
-          name: 'Aumento de Score',
-          price: 127.00,
-          tag: 'Entrega Rápida',
-          fields: [
-            { label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-            { label: 'NOME COMPLETO', type: 'text', placeholder: 'Seu nome completo' },
-          ]
-        },
-        {
-          name: 'Atualização de Rating',
-          price: 137.00,
-          tag: 'Entrega Rápida',
-          fields: [
-            { label: 'CNPJ', type: 'text', placeholder: '00.000.000/0001-00' },
-            { label: 'NOME DA EMPRESA', type: 'text', placeholder: 'Razão Social' },
+            { label: 'CEP', type: 'text', placeholder: '00000-000' },
+            { label: 'Endereço', type: 'text' },
+            { label: 'Número', type: 'text' },
+            { label: 'Cidade', type: 'text' },
+            { label: 'UF', type: 'text' },
           ]
         },
       ]
@@ -710,19 +406,32 @@ function HomePage() {
 
   ];
 
+  // Auto-select the only service available
+  const autoService = categories[0].items[0];
+  const autoCategory = categories[0].title;
+  const [selectedService, setSelectedService] = useState<ServiceItem | null>(autoService);
+  const totalPrice = (selectedService?.price || 0) * quantity;
+
+  useEffect(() => {
+    setFetchedData(null);
+    setFormValues({});
+    setPriceUnlocked(false);
+  }, [selectedService]);
+
+  // Ensure service and category are set on mount
+  useEffect(() => {
+    if (!selectedService) {
+      setSelectedService(autoService);
+      setSelectedCategory(autoCategory);
+    }
+  }, []);
+
   const handleSelectService = (service: ServiceItem, categoryTitle: string) => {
     setSelectedService(service);
     setSelectedCategory(categoryTitle);
-    setStage('selection');
+    setStage('form');
     setFetchedData(null);
     setPriceUnlocked(false);
-  };
-
-  const handleAdvanceToForm = () => {
-    if (selectedService) {
-      setStage('form');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
   };
 
   const handleFinalize = () => {
@@ -790,9 +499,9 @@ function HomePage() {
         {/* Main Nav */}
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-8">
           <div className="flex items-center gap-2">
-            <img 
-              src="/img/Regularize Digital.png" 
-              alt="Regulariza Digital" 
+            <img
+              src="/img/Regularize Digital.png"
+              alt="Regulariza Digital"
               className="h-[124px] w-auto object-contain"
             />
           </div>
@@ -817,7 +526,8 @@ function HomePage() {
 
       {/* Main Title Banner */}
       <div className="bg-gradient-to-r from-blue-700 to-blue-400 py-12 text-center">
-        <h1 className="text-4xl font-bold text-white">Solicite seus Serviços</h1>
+        <h1 className="text-4xl font-bold text-white uppercase tracking-tighter">Emissão de Passaporte Nacional</h1>
+        <p className="text-blue-100 font-bold mt-2 text-sm uppercase tracking-widest">Inicie sua solicitação de forma rápida e segura</p>
       </div>
 
       {/* Client Banner */}
@@ -862,283 +572,290 @@ function HomePage() {
             {/* Step Indicator */}
             <div className="mb-6 flex items-center gap-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-lg font-bold text-white">
-                {stage === 'selection' ? '1' : stage === 'form' ? '2' : '3'}
+                {stage === 'form' ? '1' : '2'}
               </div>
               <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">
-                {stage === 'selection' ? 'Selecione o Serviço' : stage === 'form' ? 'Informações do Cliente' : 'Checkout e Pagamento'}
+                {stage === 'form' ? 'Informações do Cliente' : 'Checkout e Pagamento'}
               </h2>
             </div>
 
-            {/* Service Groups (Always Expanded) */}
+            {/* Form / Checkout */}
             <AnimatePresence mode="wait">
-              {stage === 'selection' ? (
-                <motion.div
-                  key="selection"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                >
-                  {/* Search Bar */}
-                  <div className="relative mb-8">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                      <Search className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Qual serviço você procura?"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full rounded-xl border border-gray-200 bg-white py-4 pl-12 pr-4 shadow-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    />
-                  </div>
-
-                  <div className="space-y-4">
-                    {categories
-                      .map(cat => ({
-                        ...cat,
-                        items: cat.items.filter(item =>
-                          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          item.subtitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          cat.title.toLowerCase().includes(searchQuery.toLowerCase())
-                        )
-                      }))
-                      .filter(cat => cat.items.length > 0)
-                      .map((cat) => (
-                        <ServiceGroup
-                          key={cat.id}
-                          category={cat}
-                          onSelectService={handleSelectService}
-                          selectedService={selectedService}
-                        />
-                      ))}
-
-                    {searchQuery && categories.every(cat =>
-                      !cat.items.some(item =>
-                        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        item.subtitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        cat.title.toLowerCase().includes(searchQuery.toLowerCase())
-                      )
-                    ) && (
-                        <div className="py-12 text-center">
-                          <Search className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                          <p className="text-gray-500 font-medium">Nenhum serviço encontrado para "{searchQuery}"</p>
-                          <button
-                            onClick={() => setSearchQuery('')}
-                            className="mt-4 text-blue-600 font-bold hover:underline"
-                          >
-                            Limpar busca
-                          </button>
-                        </div>
-                      )}
-                  </div>
-                </motion.div>
-              ) : stage === 'form' ? (
+              {stage === 'form' ? (
                 <motion.div
                   key="form"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm"
+                  className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden"
                 >
-                  <button
-                    onClick={() => setStage('selection')}
-                    className="mb-6 flex items-center gap-2 text-sm font-bold text-blue-600 hover:underline"
-                  >
-                    <ChevronRight className="h-4 w-4 rotate-180" />
-                    Voltar para seleção de serviços
-                  </button>
+                  <div className="bg-gray-50 border-b border-gray-100 p-6 flex flex-col gap-4">
 
-                  {/* Urgency Banner */}
-                  {selectedService?.urgentNotice && (
-                    <div className="mb-8 flex items-start gap-4 rounded-xl border border-red-100 bg-red-50 p-5 text-red-800 shadow-sm">
-                      <AlertCircle className="h-6 w-6 flex-shrink-0 text-red-600" />
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs font-black uppercase tracking-widest">Aviso Importante</span>
-                        <p className="text-sm font-bold leading-relaxed">
-                          {selectedService.urgentNotice}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                    <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">
+                      {selectedService?.name}
+                    </h3>
 
-                  <h3 className="mb-6 text-lg font-bold text-gray-800">
-                    Preencha os dados para <span className="text-blue-600">{selectedService?.name}</span>
-                  </h3>
-
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    {selectedService?.fields.map((field, idx) => (
-                      <div key={idx} className={`flex flex-col gap-2 ${field.type === 'textarea' ? 'md:col-span-2' : ''}`}>
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-bold text-gray-500 uppercase">
-                            {field.label} {field.optional && <span className="text-[10px] font-normal lowercase">(opcional)</span>}
-                          </label>
-                          {(field.label === 'CPF' || field.label === 'CNPJ') && (
-                            <div className="flex items-center gap-1 text-[10px] font-bold text-blue-600">
-                              <Lock className="h-3 w-3" />
-                              CONEXÃO SEGURA LGPD
+                    {/* Step Map (Modem Map) */}
+                    <div className="flex items-center justify-between mt-2 px-2">
+                      {[
+                        { step: 1, label: 'Dados pessoais' },
+                        { step: 2, label: 'Documentos' },
+                        { step: 3, label: 'Dados complementares' },
+                        { step: 4, label: 'Revisar dados' }
+                      ].map((s, i, arr) => (
+                        <React.Fragment key={s.step}>
+                          <div className="flex flex-col items-center gap-2 relative">
+                            <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${formStep === s.step ? 'bg-blue-600 text-white shadow-lg scale-110' : formStep > s.step ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                              {formStep > s.step ? <CheckCircle2 className="h-4 w-4" /> : s.step}
                             </div>
-                          )}
-                        </div>
-
-                        {field.info ? (
-                          <div className="rounded-lg bg-blue-50 p-3 text-sm font-medium text-blue-700">
-                            {field.info}
+                            <span className={`text-[10px] font-black uppercase tracking-tighter text-center whitespace-nowrap absolute -bottom-6 ${formStep === s.step ? 'text-blue-600' : 'text-gray-400'}`}>
+                              {s.label}
+                            </span>
                           </div>
-                        ) : field.type === 'select' ? (
-                          <select
-                            value={formValues[field.label] || ''}
-                            onChange={(e) => setFormValues(prev => ({ ...prev, [field.label]: e.target.value }))}
-                            className="rounded-lg border border-gray-200 bg-gray-50 p-3 outline-none focus:border-blue-500 focus:bg-white"
-                          >
-                            <option value="">Selecione uma opção</option>
-                            {field.options?.map((opt, i) => (
-                              <option key={i} value={opt}>{opt}</option>
-                            ))}
-                          </select>
-                        ) : field.type === 'textarea' ? (
-                          <textarea
-                            placeholder={field.placeholder}
-                            rows={4}
-                            value={formValues[field.label] || ''}
-                            onChange={(e) => setFormValues(prev => ({ ...prev, [field.label]: e.target.value }))}
-                            className="rounded-lg border border-gray-200 bg-gray-50 p-3 outline-none focus:border-blue-500 focus:bg-white"
-                          />
-                        ) : (
-                          <input
-                            type={field.type}
-                            placeholder={field.placeholder}
-                            value={formValues[field.label] || ''}
-                            onChange={(e) => {
-                              let val = e.target.value;
-                              const label = field.label.toUpperCase().trim();
+                          {i < arr.length - 1 && (
+                            <div className={`flex-1 h-[2px] mx-2 transition-all ${formStep > s.step ? 'bg-green-500' : 'bg-gray-200'}`} />
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
 
-                              if (label === 'CPF') {
-                                val = val.replace(/\D/g, '').slice(0, 11);
-                                val = val.replace(/(\d{3})(\d)/, '$1.$2');
-                                val = val.replace(/(\d{3})(\d)/, '$1.$2');
-                                val = val.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-                              } else if (label === 'CNPJ' || label === 'CNPJ MEI') {
-                                val = val.replace(/\D/g, '').slice(0, 14);
-                                val = val.replace(/^(\d{2})(\d)/, '$1.$2');
-                                val = val.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-                                val = val.replace(/\.(\d{3})(\d)/, '.$1/$2');
-                                val = val.replace(/(\d{4})(\d)/, '$1-$2');
-                              } else if (label === 'CPF/CNPJ') {
-                                val = val.replace(/\D/g, '').slice(0, 14);
-                                if (val.replace(/\D/g, '').length <= 11) {
-                                  val = val.replace(/(\d{3})(\d)/, '$1.$2');
-                                  val = val.replace(/(\d{3})(\d)/, '$1.$2');
-                                  val = val.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-                                } else {
-                                  val = val.replace(/^(\d{2})(\d)/, '$1.$2');
-                                  val = val.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-                                  val = val.replace(/\.(\d{3})(\d)/, '.$1/$2');
-                                  val = val.replace(/(\d{4})(\d)/, '$1-$2');
-                                }
-                              } else if (field.type === 'tel') {
-                                val = val.replace(/\D/g, '').slice(0, 11);
-                                val = val.replace(/^(\d{2})(\d)/g, '($1) $2');
-                                val = val.replace(/(\d)(\d{4})$/, '$1-$2');
-                              }
-
-                              setFormValues(prev => ({ ...prev, [field.label]: val }));
-                            }}
-                            className="rounded-lg border border-gray-200 bg-gray-50 p-3 outline-none focus:border-blue-500 focus:bg-white"
-                          />
-                        )}
+                  <div className="p-8 pt-12">
+                    {/* Urgency Banner */}
+                    {selectedService?.urgentNotice && formStep === 1 && (
+                      <div className="mb-8 flex items-start gap-4 rounded-xl border border-red-100 bg-red-50 p-5 text-red-800 shadow-sm">
+                        <AlertCircle className="h-6 w-6 flex-shrink-0 text-red-600" />
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs font-black uppercase tracking-widest">Aviso Importante</span>
+                          <p className="text-sm font-bold leading-relaxed">
+                            {selectedService.urgentNotice}
+                          </p>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    )}
 
-                  <div className="mt-8">
-                    <button
-                      onClick={() => handleConfirmData()}
-                      disabled={isLoadingData}
-                      className="w-full rounded-lg bg-blue-900 py-4 text-sm font-black text-white shadow-lg transition-all hover:bg-blue-950 active:scale-[0.98] disabled:opacity-50"
-                    >
-                      {isLoadingData ? 'CONSULTANDO BASE DE DADOS...' : 'CONFIRMAR DADOS E GERAR TAXAS'}
-                    </button>
-                  </div>
-
-                  {/* Skeleton / Fetched Data Confirmation */}
-                  <div className="flex flex-col gap-6">
-                    <AnimatePresence mode="popLayout">
-                      {isLoadingData && (
+                    <AnimatePresence mode="wait">
+                      {formStep === 1 && (
                         <motion.div
-                          key="skeleton"
-                          layout
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="mt-8 space-y-4 overflow-hidden"
+                          key="step1"
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
-                          <div className="h-4 w-1/3 animate-pulse rounded bg-gray-200" />
-                          <div className="h-12 w-full animate-pulse rounded-lg bg-gray-100" />
-                          <div className="h-12 w-full animate-pulse rounded-lg bg-gray-100" />
+                          <div className="md:col-span-2 border-l-4 border-blue-600 pl-4 mb-2">
+                            <h4 className="text-sm font-black text-blue-900 uppercase">Dados Pessoais</h4>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase">(*) Preenchimento Obrigatório</p>
+                          </div>
+
+                          {['Nome completo', 'Sexo', 'Data de nascimento', 'Filiação 1 (Nome)', 'Filiação 2 (Nome)', 'Nacionalidade', 'Raça ou cor', 'Estado civil'].map(label => {
+                            const field = selectedService?.fields.find(f => f.label === label);
+                            if (!field) return null;
+                            return (
+                              <div key={label} className="flex flex-col gap-2">
+                                <label className="text-xs font-bold text-gray-500 uppercase">{label} {field.optional && '(opcional)'}</label>
+                                {field.type === 'select' ? (
+                                  <select
+                                    value={formValues[label] || ''}
+                                    onChange={(e) => setFormValues(prev => ({ ...prev, [label]: e.target.value }))}
+                                    className="rounded-lg border border-gray-200 bg-gray-50 p-3 outline-none focus:border-blue-500 focus:bg-white"
+                                  >
+                                    <option value="">Selecione...</option>
+                                    {field.options?.map(o => <option key={o} value={o}>{o}</option>)}
+                                  </select>
+                                ) : (
+                                  <input
+                                    type={field.type}
+                                    placeholder={field.placeholder}
+                                    value={formValues[label] || ''}
+                                    onChange={(e) => setFormValues(prev => ({ ...prev, [label]: e.target.value }))}
+                                    className="rounded-lg border border-gray-200 bg-gray-50 p-3 outline-none focus:border-blue-500 focus:bg-white"
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
                         </motion.div>
                       )}
 
-                      {fetchedData && !isLoadingData && (
+                      {formStep === 2 && (
                         <motion.div
-                          key="data-box"
-                          layout
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          className={`mt-8 rounded-xl border p-6 overflow-hidden ${fetchedData.isError ? 'border-red-100 bg-red-50' : 'border-green-100 bg-green-50'}`}
+                          key="step2"
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="grid grid-cols-1 gap-6 md:grid-cols-2"
                         >
-                          <div className={`mb-4 flex items-center gap-2 ${fetchedData.isError ? 'text-red-700' : 'text-green-700'}`}>
-                            {fetchedData.isError ? <AlertCircle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
-                            <span className="text-sm font-bold uppercase tracking-wider">
-                              {fetchedData.isError ? 'Erro na Localização dos Dados' : 'Dados Encontrados na Receita'}
-                            </span>
+                          <div className="md:col-span-2 border-l-4 border-blue-600 pl-4 mb-2">
+                            <h4 className="text-sm font-black text-blue-900 uppercase">Documentação</h4>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase">(*) Preenchimento Obrigatório</p>
                           </div>
-                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div className="flex flex-col min-w-0">
-                              <span className={`text-[10px] font-bold uppercase ${fetchedData.isError ? 'text-red-600' : 'text-green-600'}`}>
-                                {fetchedData.isError ? 'Status' : 'Razão Social'}
-                              </span>
-                              <span className="text-sm font-black text-gray-800 break-words">{fetchedData.companyName}</span>
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className={`text-[10px] font-bold uppercase ${fetchedData.isError ? 'text-red-600' : 'text-green-600'}`}>
-                                {fetchedData.isError ? 'Ação' : 'Nome Fantasia'}
-                              </span>
-                              <span className="text-sm font-black text-gray-800 break-words">{fetchedData.tradeName}</span>
-                            </div>
+                          {['CPF', 'Identidade (RG)', 'Órgão Emissor', 'Data de Emissão (RG)'].map(label => {
+                            const field = selectedService?.fields.find(f => f.label === label);
+                            if (!field) return null;
+                            return (
+                              <div key={label} className="flex flex-col gap-2">
+                                <label className="text-xs font-bold text-gray-500 uppercase">{label}</label>
+                                <input
+                                  type={field.type}
+                                  placeholder={field.placeholder}
+                                  value={formValues[label] || ''}
+                                  onChange={(e) => {
+                                    let val = e.target.value;
+                                    if (label === 'CPF') {
+                                      val = val.replace(/\D/g, '').slice(0, 11).replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                                    }
+                                    setFormValues(prev => ({ ...prev, [label]: val }));
+                                  }}
+                                  className="rounded-lg border border-gray-200 bg-gray-50 p-3 outline-none focus:border-blue-500 focus:bg-white"
+                                />
+                              </div>
+                            );
+                          })}
+                        </motion.div>
+                      )}
+
+                      {formStep === 3 && (
+                        <motion.div
+                          key="step3"
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="grid grid-cols-1 gap-6 md:grid-cols-2"
+                        >
+                          <div className="md:col-span-2 border-l-4 border-blue-600 pl-4 mb-2">
+                            <h4 className="text-sm font-black text-blue-900 uppercase">Dados Complementares</h4>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase">(*) Preenchimento Obrigatório</p>
                           </div>
-                          {!fetchedData.isError && (
-                            <p className="mt-4 text-xs font-medium text-green-600">
-                              * Por favor, confirme se os dados acima correspondem à sua empresa.
+                          {['Profissão', 'EMAIL', 'Telefone / WhatsApp', 'CEP', 'Endereço', 'Número', 'Cidade', 'UF'].map(label => {
+                            const field = selectedService?.fields.find(f => f.label === label);
+                            if (!field) return null;
+                            return (
+                              <div key={label} className={`flex flex-col gap-2 ${label === 'Endereço' ? 'md:col-span-2' : ''}`}>
+                                <label className="text-xs font-bold text-gray-500 uppercase">{label}</label>
+                                <input
+                                  type={field.type}
+                                  placeholder={field.placeholder}
+                                  value={formValues[label] || ''}
+                                  onChange={(e) => {
+                                    let val = e.target.value;
+                                    if (label === 'CEP') {
+                                      val = val.replace(/\D/g, '').slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2');
+                                    } else if (label === 'Telefone / WhatsApp') {
+                                      val = val.replace(/\D/g, '').slice(0, 11).replace(/^(\d{2})(\d)/g, '($1) $2').replace(/(\d)(\d{4})$/, '$1-$2');
+                                    }
+                                    setFormValues(prev => ({ ...prev, [label]: val }));
+                                  }}
+                                  className="rounded-lg border border-gray-200 bg-gray-50 p-3 outline-none focus:border-blue-500 focus:bg-white"
+                                />
+                              </div>
+                            );
+                          })}
+                        </motion.div>
+                      )}
+
+                      {formStep === 4 && (
+                        <motion.div
+                          key="step4"
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="space-y-6"
+                        >
+                          <div className="border-l-4 border-green-500 bg-green-50 p-4 rounded-r-lg">
+                            <h4 className="text-sm font-black text-green-900 uppercase">Confira atentamente as informações abaixo:</h4>
+                            <p className="text-[10px] text-green-700 font-bold mt-1 uppercase leading-tight">
+                              Caso detecte algum erro nos dados a seguir, volte ao campo correspondente para corrigir. Erro em algum desses campos implicará em ATRASO na entrega do seu passaporte.
                             </p>
-                          )}
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-4 text-xs">
+                            {Object.entries(formValues).map(([key, value]) => (
+                              <div key={key} className="flex flex-col border-b border-gray-100 pb-2">
+                                <span className="font-bold text-blue-900 uppercase text-[9px] tracking-widest">{key}</span>
+                                <span className="text-gray-700 font-black uppercase mt-0.5">{value || '---'}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="pt-4 space-y-4">
+                            <label className="flex cursor-pointer items-start gap-3">
+                              <input
+                                type="checkbox"
+                                checked={acceptedTerms}
+                                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-[11px] font-bold leading-relaxed text-gray-500 uppercase tracking-tighter">
+                                Declaro que as informações acima estão corretas e que estou ciente de que qualquer erro nos dados implicará em atraso na emissão do meu documento de viagem.
+                              </span>
+                            </label>
+
+                            <div className="flex items-center gap-3 rounded-lg bg-blue-50 p-4 text-blue-700 border border-blue-100">
+                              <Lock className="h-5 w-5 flex-shrink-0" />
+                              <p className="text-[10px] font-bold uppercase leading-tight">Seus dados estão protegidos por criptografia SSL de 256 bits conforme as normas da LGPD.</p>
+                            </div>
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
 
-                    <div className="flex items-center gap-3 rounded-lg bg-blue-50 p-4 text-blue-700">
-                      <Lock className="h-5 w-5 flex-shrink-0" />
-                      <p className="text-sm font-medium">Seus dados estão protegidos por criptografia de ponta a ponta.</p>
+                    {/* Navigation Buttons */}
+                    <div className="mt-12 flex items-center justify-between gap-4">
+                      {formStep > 1 ? (
+                        <button
+                          onClick={() => setFormStep(prev => prev - 1)}
+                          className="flex-1 rounded-xl border-2 border-gray-200 py-4 text-xs font-black text-gray-500 hover:bg-gray-50 transition-all uppercase tracking-widest"
+                        >
+                          Anterior
+                        </button>
+                      ) : <div className="flex-1" />}
+
+                      {formStep < 4 ? (
+                        <button
+                          onClick={() => {
+                            const currentStepFields = [
+                              ['Nome completo', 'Sexo', 'Data de nascimento', 'Filiação 1 (Nome)', 'Nacionalidade', 'Raça ou cor', 'Estado civil'],
+                              ['CPF', 'Identidade (RG)', 'Órgão Emissor', 'Data de Emissão (RG)'],
+                              ['Profissão', 'EMAIL', 'Telefone / WhatsApp', 'CEP', 'Endereço', 'Número', 'Cidade', 'UF']
+                            ][formStep - 1];
+
+                            const isStepValid = currentStepFields.every(label => {
+                              const field = selectedService?.fields.find(f => f.label === label);
+                              return field?.optional || (formValues[label] && formValues[label].length > 0);
+                            });
+
+                            if (isStepValid) {
+                              setFormStep(prev => prev + 1);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            } else {
+                              alert('Por favor, preencha todos os campos obrigatórios.');
+                            }
+                          }}
+                          className="flex-2 rounded-xl bg-blue-600 py-4 px-8 text-xs font-black text-white shadow-lg hover:bg-blue-700 transition-all uppercase tracking-widest active:scale-95"
+                        >
+                          Próximo
+                        </button>
+                      ) : (
+                        <button
+                          onClick={async () => {
+                            if (acceptedTerms) {
+                              await handleConfirmData();
+                              handleFinalize();
+                            } else {
+                              alert('Você precisa aceitar a declaração de veracidade dos dados.');
+                            }
+                          }}
+                          className={`flex-2 rounded-xl py-4 px-10 text-xs font-black text-white shadow-lg transition-all uppercase tracking-widest active:scale-95 ${acceptedTerms ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'}`}
+                        >
+                          Enviar Solicitação
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  {/* Terms & LGPD */}
-                  <div className="mt-8 space-y-4 border-t border-gray-100 pt-8">
-                    <label className="flex cursor-pointer items-start gap-3">
-                      <input
-                        type="checkbox"
-                        checked={acceptedTerms}
-                        onChange={(e) => setAcceptedTerms(e.target.checked)}
-                        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-xs font-medium leading-relaxed text-gray-500">
-                        Li e concordo com os <a href="#" className="text-blue-600 underline">Termos de Uso</a> e a <a href="#" className="text-blue-600 underline">Política de Privacidade (LGPD)</a> da REGULARIZA DIGITAL.
-                      </span>
-                    </label>
-                  </div>
-
-                  <p className="mt-8 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    A REGULARIZA DIGITAL é uma plataforma privada de assessoria contábil e jurídica, independente do Governo Federal.
+                  <p className="p-6 text-center text-[9px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 border-t border-gray-100">
+                    A REGULARIZA DIGITAL é uma assessoria privada independente de órgãos governamentais.
                   </p>
                 </motion.div>
               ) : (
@@ -1147,6 +864,8 @@ function HomePage() {
                   formValues={formValues}
                   fetchedData={fetchedData}
                   onBack={handleBackToForm}
+                  totalPrice={totalPrice}
+                  quantity={quantity}
                 />
               )}
             </AnimatePresence>
@@ -1156,7 +875,7 @@ function HomePage() {
           {stage !== 'checkout' && (
             <div className="lg:col-span-1">
               <div className="sticky top-28 rounded-2xl bg-white p-6 shadow-xl shadow-gray-200/50">
-                <h3 className="mb-6 text-xl font-bold text-gray-950">Resumo do pedido</h3>
+                <h3 className="mb-6 text-xl font-bold text-gray-950 uppercase tracking-tighter">Resumo do Pedido</h3>
 
                 {!selectedService ? (
                   <div className="mb-8 flex flex-col items-center justify-center py-8 text-center">
@@ -1167,59 +886,50 @@ function HomePage() {
                   </div>
                 ) : (
                   <div className="mb-6">
-                    <p className="mb-3 text-sm font-bold text-gray-600">{selectedCategory}</p>
+                    <p className="mb-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">Serviço Selecionado</p>
 
-                    <div className="mb-4 flex items-center justify-between rounded-lg border border-blue-400 bg-white p-4 shadow-sm">
-                      <span className="text-sm font-medium text-gray-800">{selectedService.name}</span>
-                      <span className="text-sm font-black text-gray-900">
-                        {priceUnlocked ? (
-                          `R$ ${selectedService.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                        ) : (
-                          <span className="text-[10px] font-bold text-blue-600">Calculando taxas...</span>
-                        )}
-                      </span>
+                    {/* Order Items List */}
+                    <div className="mb-4 flex flex-col gap-2">
+                      {Array.from({ length: quantity }).map((_, i) => (
+                        <div key={i} className="flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[10px] font-black text-white">
+                              {i + 1}
+                            </div>
+                            <span className="text-[11px] font-black text-blue-900 uppercase leading-tight">{selectedService.name}</span>
+                          </div>
+                          {i > 0 && (
+                            <button
+                              onClick={() => setQuantity(q => q - 1)}
+                              className="flex h-6 w-6 items-center justify-center rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors text-xs font-black"
+                              title="Remover"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
                     </div>
 
+                    {/* Add Another Button */}
                     <button
-                      onClick={() => {
-                        setSelectedService(null);
-                        setStage('selection');
-                        setPriceUnlocked(false);
-                      }}
-                      className="mb-8 flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-blue-600"
+                      onClick={() => setQuantity(q => Math.min(q + 1, 10))}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-200 py-3 text-[11px] font-black text-blue-500 hover:border-blue-400 hover:bg-blue-50 transition-all uppercase tracking-widest mb-6"
                     >
                       <PlusCircle className="h-4 w-4" />
-                      Remover Serviço
+                      Adicionar outra emissão
                     </button>
 
-                    <div className="mb-6 flex items-center justify-between border-t border-gray-100 pt-6">
-                      <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">TOTAL</span>
-                      <span className="text-2xl font-black text-blue-500">
-                        {priceUnlocked ? (
-                          `R$ ${selectedService.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                    <div className="mb-6 flex items-center justify-between border-t border-gray-100 pt-5">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">TOTAL A PAGAR</span>
+                      <span className="text-2xl font-black text-blue-600">
+                        { (formStep === 4 || stage === 'checkout' || priceUnlocked) ? (
+                          `R$ ${totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                         ) : (
                           '---'
                         )}
                       </span>
                     </div>
-
-                    {stage === 'selection' ? (
-                      <button
-                        onClick={handleAdvanceToForm}
-                        className="mb-8 hidden w-full rounded-lg bg-blue-900 py-4 text-sm font-black text-white shadow-lg transition-all hover:bg-blue-950 active:scale-[0.98] lg:block"
-                      >
-                        REQUISITAR ATENDIMENTO
-                      </button>
-                    ) : (
-                      <button
-                        disabled={!acceptedTerms || !fetchedData}
-                        onClick={handleFinalize}
-                        className={`mb-8 hidden w-full rounded-lg py-4 text-sm font-black text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] lg:block ${acceptedTerms && fetchedData ? 'bg-[#4CAF50] shadow-green-200' : 'cursor-not-allowed bg-gray-300 shadow-none'
-                          }`}
-                      >
-                        FINALIZAR E PAGAR
-                      </button>
-                    )}
                   </div>
                 )}
 
@@ -1227,7 +937,7 @@ function HomePage() {
                 <div className="mb-8 flex flex-col border-l-4 border-blue-500 bg-blue-50/30 p-4 rounded-r-lg">
                   <p className="mb-1 text-sm font-black text-gray-900 uppercase tracking-wider">ATENÇÃO:</p>
                   <p className="text-sm leading-relaxed text-gray-700">
-                    Devido à alta demanda, hoje a Emissão de Certidões está limitada.
+                    Devido à alta demanda, hoje a Emissão de Passaportes está limitada.
                   </p>
                   <p className="mt-2 text-sm font-medium text-gray-900 flex items-center gap-1">
                     Restam apenas:
@@ -1281,7 +991,7 @@ function HomePage() {
                         <button
                           onClick={() => {
                             setSelectedService(item);
-                            setStage('selection');
+                            setStage('form');
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                           }}
                           className="hover:text-white transition-colors text-left"
@@ -1299,9 +1009,9 @@ function HomePage() {
               {/* Col 1 */}
               <div>
                 <div className="mb-6 flex items-center gap-2">
-                  <img 
-                    src="/img/Regularize Digital -Branca.png" 
-                    alt="Regulariza Digital" 
+                  <img
+                    src="/img/Regularize Digital -Branca.png"
+                    alt="Regulariza Digital"
                     className="h-28 w-auto object-contain"
                   />
                 </div>
@@ -1399,9 +1109,9 @@ function HomePage() {
             {/* Signature */}
             <div className="mt-12 flex flex-col items-center justify-between border-t border-gray-100 pt-8 text-center md:flex-row md:text-left">
               <div className="flex items-center gap-2 opacity-30">
-                <img 
-                  src="/img/Regularize Digital.png" 
-                  alt="Regulariza Digital" 
+                <img
+                  src="/img/Regularize Digital.png"
+                  alt="Regulariza Digital"
                   className="h-6 w-auto object-contain grayscale"
                 />
               </div>
@@ -1423,8 +1133,8 @@ function HomePage() {
               <div className="flex items-baseline gap-1">
                 <span className="text-[10px] font-bold text-gray-400 uppercase">Total:</span>
                 <span className="text-lg font-black text-blue-600">
-                  {priceUnlocked ? (
-                    `R$ ${selectedService.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                  { (formStep === 4 || stage === 'checkout' || priceUnlocked) ? (
+                    `R$ ${totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                   ) : (
                     '---'
                   )}
@@ -1433,23 +1143,14 @@ function HomePage() {
             </div>
 
             <div className="flex-1">
-              {stage === 'selection' ? (
-                <button
-                  onClick={handleAdvanceToForm}
-                  className="w-full rounded-xl bg-blue-900 py-3 text-xs font-black text-white shadow-lg transition-all active:scale-[0.98]"
-                >
-                  REQUISITAR ATENDIMENTO
-                </button>
-              ) : (
-                <button
-                  disabled={!acceptedTerms || !fetchedData}
-                  onClick={handleFinalize}
-                  className={`w-full rounded-xl py-3 text-xs font-black text-white shadow-lg transition-transform active:scale-[0.98] ${acceptedTerms && fetchedData ? 'bg-[#4CAF50] shadow-green-200' : 'cursor-not-allowed bg-gray-300 shadow-none'
-                    }`}
-                >
-                  FINALIZAR E PAGAR
-                </button>
-              )}
+              <button
+                disabled={!acceptedTerms || !fetchedData}
+                onClick={handleFinalize}
+                className={`w-full rounded-xl py-3 text-xs font-black text-white shadow-lg transition-transform active:scale-[0.98] ${acceptedTerms && fetchedData ? 'bg-[#4CAF50] shadow-green-200' : 'cursor-not-allowed bg-gray-300 shadow-none'
+                  }`}
+              >
+                FINALIZAR E PAGAR
+              </button>
             </div>
           </div>
         </div>
